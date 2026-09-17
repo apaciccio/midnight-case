@@ -1,7 +1,8 @@
 # ==== INIZIO FILE: copia da questa riga in giu' ====
-# main.gd - MIDNIGHT CASE v1.3 (TEMA DETECTIVE NOIR, SENZA INDIZI)
+# main.gd - MIDNIGHT CASE v1.4 (TEMA DETECTIVE NOIR, SENZA INDIZI)
 # v1.2: detective piu' basso e sotto il logo (non lo copre piu').
-# v1.3: scritta SCATTER (dal codice) sotto la lente quando atterra.
+# v1.3: scritta SCATTER sotto la lente quando atterra.
+# v1.4: targhetta SCATTER illustrata (assets/scatter_tag.png), testo solo di riserva.
 # v1.1: niente medaglioni degli indizi (SlotEngine.INDIZI_ATTIVI = false):
 #   restano L'Inseguimento (3 lenti), Il Caso (6 fascicoli) e il distintivo
 #   WILD espanso. Motore ribilanciato: vedi slot_engine.gd.
@@ -1133,9 +1134,33 @@ func _turbo_refresh() -> void:
 		var sb: StyleBoxFlat = turbo_btn.get_theme_stylebox("normal")
 		if sb != null: sb.bg_color = Color("#ff9a3c") if turbo else Color("#c9a24a")
 
+# TARGHETTA "SCATTER" illustrata (assets/scatter_tag.png): incollata in basso
+# sulla cella quando atterra uno scatter. Creata una volta per cella, poi
+# solo mostrata/nascosta. Se l'immagine manca, _set_cell scrive il testo.
+func _scatter_tag(c: Dictionary, mostra: bool) -> void:
+	if not mostra:
+		if c.has("tag") and is_instance_valid(c["tag"]): c["tag"].visible = false
+		return
+	if not ResourceLoader.exists("res://assets/scatter_tag.png"): return
+	if not c.has("tag") or not is_instance_valid(c["tag"]):
+		var t := TextureRect.new()
+		t.texture = load("res://assets/scatter_tag.png")
+		t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var pw: float = c["panel"].size.x
+		# al CENTRO della cella, sopra l'oggetto (un filo sotto la mezzeria)
+		t.size = Vector2(pw * 0.94, pw * 0.32)
+		t.position = Vector2(pw * 0.03, c["panel"].size.y * 0.56 - t.size.y / 2.0)
+		t.z_index = 3
+		c["panel"].add_child(t)
+		c["tag"] = t
+	c["tag"].visible = true
+
 func _set_cell(reel: int, row: int, sym: String, mult: int = 1, coin_val: int = 0) -> void:
 	var c: Dictionary = cells[reel][row]
 	c["symbol"] = sym
+	_scatter_tag(c, sym == "SCATTER")
 	if c.get("plate") != null:
 		c["plate"].visible = (sym == "COIN" and coin_val > 0)
 	_aura_cella(c, sym)
@@ -1197,8 +1222,8 @@ func _set_cell(reel: int, row: int, sym: String, mult: int = 1, coin_val: int = 
 			c["label"].text = ""
 			c["label"].position = Vector2.ZERO
 			c["label"].size = c["panel"].size
-			if sym == "SCATTER":
-				# CASE: la lente porta la scritta SCATTER (in Heist era nel disegno)
+			if sym == "SCATTER" and not ResourceLoader.exists("res://assets/scatter_tag.png"):
+				# riserva: scritta SCATTER in testo se manca la targhetta assets/scatter_tag.png
 				c["label"].text = "SCATTER"
 				c["label"].add_theme_font_size_override("font_size", 13)
 				c["label"].vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
