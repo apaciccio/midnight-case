@@ -1,8 +1,14 @@
 # ==== INIZIO FILE: copia da questa riga in giu' ====
-# main.gd - MIDNIGHT CASE v1.4 (TEMA DETECTIVE NOIR, SENZA INDIZI)
+# main.gd - MIDNIGHT CASE v1.7 (TEMA DETECTIVE NOIR, SENZA INDIZI)
 # v1.2: detective piu' basso e sotto il logo (non lo copre piu').
 # v1.3: scritta SCATTER sotto la lente quando atterra.
 # v1.4: targhetta SCATTER illustrata (assets/scatter_tag.png), testo solo di riserva.
+# v1.5: demo (tasto D, con DEMO_ATTIVA=true) limitata a Il Caso + L'Inseguimento.
+# v1.6: scatola dell'ispettore corretta (pose non piu' tagliate), insegna del
+#   bonus piu' grande col testo dentro, VINCITA EPICA a sinistra dell'ispettore,
+#   il flash parte dalla macchina fotografica.
+# v1.7: monete della tempesta a taglia giusta (expand_mode prima della size),
+#   SCATTER non buca piu' le transizioni, insegna sopra i rulli del bonus.
 # v1.1: niente medaglioni degli indizi (SlotEngine.INDIZI_ATTIVI = false):
 #   restano L'Inseguimento (3 lenti), Il Caso (6 fascicoli) e il distintivo
 #   WILD espanso. Motore ribilanciato: vedi slot_engine.gd.
@@ -586,9 +592,9 @@ func _img(path: String, x: float, y: float, w: float, h: float) -> TextureRect:
 	if not ResourceLoader.exists(path): return null
 	var t := TextureRect.new()
 	t.texture = load(path)
-	t.size = Vector2(w, h); t.position = Vector2(x, y)
 	t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
+	t.size = Vector2(w, h); t.position = Vector2(x, y)
 	add_child(t)
 	return t
 
@@ -620,9 +626,9 @@ func _build_ui() -> void:
 	if ResourceLoader.exists("res://assets/background.png"):
 		var bg := TextureRect.new()
 		bg.texture = load("res://assets/background.png")
-		bg.size = Vector2(VW, VH)
 		bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		bg.size = Vector2(VW, VH)
 		add_child(bg)
 	else:
 		var c := ColorRect.new(); c.color = Color("#0d1117"); c.size = Vector2(VW,VH); add_child(c)
@@ -701,10 +707,10 @@ func _build_ui() -> void:
 			aura.size = Vector2(CELL * 1.6, CELL * 1.6)
 			aura.position = Vector2(-CELL * 0.3, -CELL * 0.3)
 			var tex := TextureRect.new()
-			tex.size = Vector2(CELL-8, CELL-8); tex.position = Vector2(4,4)
 			tex.pivot_offset = Vector2((CELL-8) / 2.0, (CELL-8) / 2.0)
 			tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			tex.size = Vector2(CELL-8, CELL-8); tex.position = Vector2(4,4)
 			tex.visible = false
 			panel.add_child(tex)
 			# placchetta opzionale dietro il numero dei sacchi (assets/sacco_plate.png)
@@ -776,16 +782,18 @@ func _build_ui() -> void:
 	# Mastermind a destra: VIVO (respiro + ondeggio; frame animati se esistono)
 	if mm_normal != null:
 		mastermind_node = TextureRect.new()
+		# expand_mode PRIMA della texture: altrimenti la scatola prende
+		# l'altezza dell'immagine (694 px) e le pose finiscono sotto lo schermo
+		mastermind_node.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		mastermind_node.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		mastermind_node.texture = mm_normal
 		# CASE: il detective e' alto e stretto, quindi parte SOTTO il logo
 		# (logo in alto a destra fino a y~185) e finisce a filo del pavimento
-		mastermind_node.size = Vector2(414, 448)
-		mastermind_node.position = Vector2(734, 188)
-		mastermind_node.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		mastermind_node.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		mastermind_node.size = Vector2(414, 460)
+		mastermind_node.position = Vector2(734, 186)
 		add_child(mastermind_node)
 		# perno ai piedi: il respiro parte da terra, non fluttua a mezz'aria
-		mastermind_node.pivot_offset = Vector2(207, 448)
+		mastermind_node.pivot_offset = Vector2(207, 460)
 		var resp := create_tween().set_loops()
 		resp.tween_property(mastermind_node, "scale", Vector2(1.004, 1.018), 1.7).set_trans(Tween.TRANS_SINE)
 		resp.tween_property(mastermind_node, "scale", Vector2.ONE, 1.7).set_trans(Tween.TRANS_SINE)
@@ -1152,7 +1160,6 @@ func _scatter_tag(c: Dictionary, mostra: bool) -> void:
 		# al CENTRO della cella, sopra l'oggetto (un filo sotto la mezzeria)
 		t.size = Vector2(pw * 0.94, pw * 0.32)
 		t.position = Vector2(pw * 0.03, c["panel"].size.y * 0.56 - t.size.y / 2.0)
-		t.z_index = 3
 		c["panel"].add_child(t)
 		c["tag"] = t
 	c["tag"].visible = true
@@ -2999,7 +3006,7 @@ func _demo_bonus() -> void:
 	add_child(targa)
 	targa.position = Vector2(16, 12)
 	targa.z_index = 95
-	for f in ["pioggia", "cassaforte", "colpo", "scasso", "accesso", "rapina", "supremo"]:
+	for f in (["cassaforte", "colpo"] if not SlotEngine.INDIZI_ATTIVI else ["pioggia", "cassaforte", "colpo", "scasso", "accesso", "rapina", "supremo"]):
 		if balance < _bet() * 4:
 			balance += 5000   # credito demo
 			_update_balance()
@@ -3862,7 +3869,8 @@ func _mastermind_lancia(bersagli: Array) -> void:
 	var mano := Vector2(VW - 300.0, GRID_Y + 70.0)
 	if mastermind_node != null:
 		# la mano alzata con la dinamite: in alto a destra del personaggio
-		mano = mastermind_node.position + Vector2(mastermind_node.size.x * 0.70, mastermind_node.size.y * 0.14)
+		# CASE: la macchina fotografica sta davanti al petto, a sinistra del corpo
+		mano = mastermind_node.position + Vector2(mastermind_node.size.x * 0.32, mastermind_node.size.y * 0.30)
 	var tex_furia = null
 	if ResourceLoader.exists("res://assets/detective_furia.png"):
 		tex_furia = load("res://assets/detective_furia.png")
@@ -4200,7 +4208,7 @@ func _celebra_vincita(amount: int) -> void:
 	lb.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lb.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lay.add_child(lb)
-	lb.size = Vector2(VW, 150)
+	lb.size = Vector2(VW - 330.0, 150)   # CASE: a sinistra dell'ispettore
 	lb.position = Vector2(0, VH / 2.0 - 150.0)
 	lb.pivot_offset = lb.size / 2.0
 	lb.scale = Vector2(2.6, 2.6)
@@ -4221,7 +4229,7 @@ func _celebra_vincita(amount: int) -> void:
 	num.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	num.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lay.add_child(num)
-	num.size = Vector2(VW, 130)
+	num.size = Vector2(VW - 330.0, 130)
 	num.position = Vector2(0, VH / 2.0 + 10.0)
 	num.pivot_offset = num.size / 2.0
 	var durata := 1.8 + 0.9 * livello   # epica = piu' lunga
@@ -4313,21 +4321,25 @@ func _fx_start(banner_file: String, tint: Color) -> void:
 		gb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		gb.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		fx_layer.add_child(gb)
-		gb.size = Vector2(560, 105)
-		gb.position = Vector2((VW - 560) / 2.0, -130)
+		gb.size = Vector2(600, 140)
+		gb.position = Vector2((VW - 600) / 2.0, -170)
 		var gl := Label.new()
 		gl.text = T(tkey0)
-		gl.add_theme_font_size_override("font_size", 42)
-		gl.add_theme_color_override("font_color", Color("#7a1f12"))
-		gl.add_theme_color_override("font_outline_color", Color("#ffe9a8"))
-		gl.add_theme_constant_override("outline_size", 5)
+		gl.add_theme_font_size_override("font_size", 34)
+		gl.add_theme_color_override("font_color", Color("#ffe9a8"))
+		gl.add_theme_color_override("font_outline_color", Color("#3a1005"))
+		gl.add_theme_constant_override("outline_size", 6)
 		gl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		gl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		gb.add_child(gl)
-		gl.size = gb.size
+		# il testo sta nel pannello centrale dell'insegna (sotto il fregio in alto)
+		gl.position = Vector2(0, gb.size.y * 0.16)
+		gl.size = Vector2(gb.size.x, gb.size.y * 0.72)
 		banner_node = gb
 		var tg := create_tween()
-		tg.tween_property(gb, "position:y", 8.0, 0.5).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		# si ferma a -32: il fregio in alto esce dallo schermo, il pannello col
+		# testo resta sopra i rulli del bonus (che iniziano a y=120)
+		tg.tween_property(gb, "position:y", -32.0, 0.5).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		return
 	var bp := "res://assets/%s_%s.png" % [banner_file, L]
 	if not ResourceLoader.exists(bp) and L == "it":
@@ -4447,9 +4459,9 @@ func _burst_money(n: int) -> void:
 	for i in n:
 		var s := TextureRect.new()
 		if coin_tex != null: s.texture = coin_tex
-		s.size = Vector2(48, 48)
 		s.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		s.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
+		s.size = Vector2(48, 48)
 		s.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		s.position = Vector2(VW/2.0 - 24, VH/2.0 - 24)
 		s.pivot_offset = s.size / 2.0
@@ -4478,9 +4490,9 @@ func _bonus_enter() -> void:
 		var tex = coin_tex if i % 2 == 0 else bill_tex
 		if tex != null: s.texture = tex
 		var sz := randf_range(0.7, 1.5)
-		s.size = Vector2(64, 64) * sz
 		s.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		s.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
+		s.size = Vector2(64, 64) * sz   # DOPO expand_mode: altrimenti prende la taglia dell'immagine
 		s.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		s.position = Vector2(randf_range(-40, VW), randf_range(-720, -60))
 		s.rotation_degrees = randf_range(-60, 60)
