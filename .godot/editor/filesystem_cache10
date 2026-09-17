@@ -1,14 +1,14 @@
 72322a848ab928aa5c89f0cb78209805
-::res://::1789636751
+::res://::1789637468
 export_presets.cfg::TextFile::-1::1789571753::0::1::::<><><>0<>0<><>::
 icon.svg::CompressedTexture2D::6836238532825049405::1789571753::1789571843::1::::<><><>0<>0<>e321fb88e10232fd47a4ab3932e3bd8d<>res://.godot/imported/icon.svg-218a8f2b3041327d8a5756f3a245f83b.ctex::
 lang.gd::GDScript::3579714070301098286::1789572605::0::1::::Lingue<>RefCounted<><>0<>0<><>::
-main.gd::GDScript::4724483375596869967::1789636745::0::1::::<>Node2D<><>0<>0<><>::
+main.gd::GDScript::4724483375596869967::1789637456::0::1::::<>Node2D<><>0<>0<><>::
 main.tscn::PackedScene::-1::1789571262::0::1::::<><><>0<>0<><>::res://main.gd
-menu.gd::GDScript::6174493242487307250::1789572605::0::1::::<>Node2D<><>0<>0<><>::
+menu.gd::GDScript::6174493242487307250::1789637121::0::1::::<>Node2D<><>0<>0<><>::
 menu.tscn::PackedScene::-1::1789571262::0::1::::<><><>0<>0<><>::res://menu.gd
 slot_engine.gd::GDScript::4993531275755090996::1789636320::0::1::::SlotEngine<>RefCounted<><>0<>0<><>::
-::res://assets/::1789636839
+::res://assets/::1789636840
 background.png::CompressedTexture2D::8173869336589921654::1789571262::1789571542::1::::<><><>0<>0<>6b12e0e262111d2a1ddc84f1e7138368<>res://.godot/imported/background.png-1fdba8b6a966ce2c2ffc607f7c096e95.ctex::
 banner_scena.png::CompressedTexture2D::5987570652051014746::1789636604::1789636752::1::::<><><>0<>0<>54fd6149b0cb6f8682a35965c68fa99a<>res://.godot/imported/banner_scena.png-ea1d1a25297dc00cd870e472ac27a0c8.ctex::
 banner_secolo.png::CompressedTexture2D::768493762641063243::1789571534::1789571542::1::::<><><>0<>0<>7dfdb594271abb0bd07eb9958f09f722<>res://.godot/imported/banner_secolo.png-f9c9d1961502a7293c49623ad0d3f39d.ctex::
@@ -97,4 +97,4 @@ scatter.png::CompressedTexture2D::2792582427542580389::1789571262::1789571542::1
 scatter_fs.png::CompressedTexture2D::3117562119374424057::1789571262::1789571542::1::::<><><>0<>0<>54ea2afef88c67708b1f52ec756f05c8<>res://.godot/imported/scatter_fs.png-e173e798a8566477474df3548510ea4c.ctex::
 wild.png::CompressedTexture2D::2782805757157872958::1789571262::1789571542::1::::<><><>0<>0<>3365a629d67f69e8c1bda13eff295f95<>res://.godot/imported/wild.png-e4f2c103c9b55bacad7e6063ff836d38.ctex::
 ::res://export/::1789571539
-::res://export/mac/::1789636839
+::res://export/mac/::1789637468

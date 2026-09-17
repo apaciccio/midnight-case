@@ -1,6 +1,7 @@
 # ==== INIZIO FILE: copia da questa riga in giu' ====
-# main.gd - MIDNIGHT CASE v1.2 (TEMA DETECTIVE NOIR, SENZA INDIZI)
+# main.gd - MIDNIGHT CASE v1.3 (TEMA DETECTIVE NOIR, SENZA INDIZI)
 # v1.2: detective piu' basso e sotto il logo (non lo copre piu').
+# v1.3: scritta SCATTER (dal codice) sotto la lente quando atterra.
 # v1.1: niente medaglioni degli indizi (SlotEngine.INDIZI_ATTIVI = false):
 #   restano L'Inseguimento (3 lenti), Il Caso (6 fascicoli) e il distintivo
 #   WILD espanso. Motore ribilanciato: vedi slot_engine.gd.
@@ -1196,6 +1197,14 @@ func _set_cell(reel: int, row: int, sym: String, mult: int = 1, coin_val: int = 
 			c["label"].text = ""
 			c["label"].position = Vector2.ZERO
 			c["label"].size = c["panel"].size
+			if sym == "SCATTER":
+				# CASE: la lente porta la scritta SCATTER (in Heist era nel disegno)
+				c["label"].text = "SCATTER"
+				c["label"].add_theme_font_size_override("font_size", 13)
+				c["label"].vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+				c["label"].add_theme_color_override("font_color", Color("#ffe9a8"))
+				c["label"].add_theme_color_override("font_outline_color", Color("#2a1505"))
+				c["label"].add_theme_constant_override("outline_size", 6)
 		return
 	c["tex"].visible = false
 	c["label"].vertical_alignment = VERTICAL_ALIGNMENT_CENTER

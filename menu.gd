@@ -1,5 +1,5 @@
 # ==== INIZIO FILE: copia da questa riga in giu' ====
-# menu.gd - MENU MIDNIGHT CASE v1.0 (base: menu Midnight Heist v2.5)
+# menu.gd - MENU MIDNIGHT CASE v1.1 (attract solo monete; base: menu Midnight Heist v2.5)
 # v2.5: sul web i browser bloccano l'audio finche' l'utente non tocca la
 #   pagina: al primo click/tocco il menu fa (ri)partire la musica.
 # v2.4.1: fix - lo Sprite2D e' gia' centrato, niente pivot_offset;
@@ -186,9 +186,7 @@ func _titolo_brillio(t: Sprite2D, _sc: float) -> void:
 		fl.tween_property(t, "modulate", Color.WHITE, 0.35)
 
 func _attract_mode() -> void:
-	# vincita finta ricorrente: monete che salgono + scritta sfumata (solo estetica)
-	var frasi := ["MEGA WIN", "BIG WIN", "JACKPOT!"]
-	var fi := 0
+	# vincita finta ricorrente: monete che salgono (solo estetica; CASE senza scritte)
 	while is_instance_valid(self):
 		await get_tree().create_timer(6.0).timeout
 		if not is_instance_valid(self): return
@@ -211,25 +209,7 @@ func _attract_mode() -> void:
 			tc.tween_property(c, "position:y", VH + 50.0, randf_range(0.7, 1.1)).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 			var trc := create_tween()
 			trc.tween_property(c, "rotation_degrees", randf_range(-360, 360), 2.0)
-		var lb := Label.new()
-		lb.text = frasi[fi % frasi.size()]; fi += 1
-		lb.add_theme_font_size_override("font_size", 64)
-		lb.add_theme_color_override("font_color", Color("#ffd700"))
-		lb.add_theme_color_override("font_outline_color", Color("#5a3c08"))
-		lb.add_theme_constant_override("outline_size", 12)
-		lb.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		lb.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		lay.add_child(lb)
-		lb.size = Vector2(VW, 90)
-		lb.position = Vector2(0, VH*0.28)
-		lb.pivot_offset = lb.size / 2.0
-		lb.scale = Vector2(0.4, 0.4)
-		lb.modulate.a = 0.0
-		var tl := create_tween()
-		tl.tween_property(lb, "modulate:a", 0.85, 0.3)
-		tl.parallel().tween_property(lb, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		tl.tween_interval(1.2)
-		tl.tween_property(lb, "modulate:a", 0.0, 0.5)
+		# CASE: niente scritte BIG WIN/JACKPOT nell'attract, solo le monete
 		await get_tree().create_timer(2.6).timeout
 		if is_instance_valid(lay): lay.queue_free()
 
