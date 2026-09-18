@@ -1,5 +1,12 @@
 # ==== INIZIO FILE: copia da questa riga in giu' ====
-# main.gd - MIDNIGHT CASE v1.7 (TEMA DETECTIVE NOIR, SENZA INDIZI)
+# main.gd - MIDNIGHT CASE v1.9 (TEMA DETECTIVE NOIR, SENZA INDIZI)
+# v1.9: l'ispettore ESULTA (detective_win_1..N) a ogni vincita del gioco base,
+#   per tutta la durata del conteggio; prima i fotogrammi win partivano solo
+#   dentro i bonus.
+# v1.8: l'insegna dei bonus entra TUTTA nello spazio sopra i rulli (non piu'
+#   tagliata in alto) e il testo si rimpicciolisce da solo se e' lungo; il
+#   FLASH non compare piu' prima del lancio quando il suo rullo ha un
+#   DISTINTIVO che si espande.
 # v1.2: detective piu' basso e sotto il logo (non lo copre piu').
 # v1.3: scritta SCATTER sotto la lente quando atterra.
 # v1.4: targhetta SCATTER illustrata (assets/scatter_tag.png), testo solo di riserva.
@@ -2679,6 +2686,12 @@ func _play_heist(result: Dictionary, scale: float, fs_key: String = "free_spins"
 
 func _count_up(prefix: String, amount: int, duration: float) -> void:
 	_dbg("H count_up")
+	# v1.9: esultanza dell'ispettore durante il conteggio (solo se era a riposo:
+	# dentro i bonus e nella vincita grande comanda gia' la scena)
+	var mm_esulta := mastermind_node != null and is_instance_valid(mastermind_node) and mm_frames_attivi == "idle" and mm_win_frames.size() >= 2 and amount > 0
+	if mm_esulta:
+		mm_frames_attivi = "win"
+		mastermind_node.texture = mm_win_frames[0]
 	_sfx("sfx_win_big" if amount >= _bet() * 10 else "sfx_win_small")
 	win_label.pivot_offset = win_label.size / 2.0
 	var pulse := create_tween().set_loops()
@@ -2693,6 +2706,9 @@ func _count_up(prefix: String, amount: int, duration: float) -> void:
 	pulse.kill()
 	win_label.scale = Vector2.ONE
 	sfx_player.stop()   # taglia le monete: niente code che si sovrappongono alla musica
+	if mm_esulta and mm_frames_attivi == "win" and mastermind_node != null and is_instance_valid(mastermind_node):
+		# resta in posa ancora un attimo, poi torna a fumare la pipa
+		_mm_torna_idle()
 
 func _winning_cells_of(grid: Array, res: Dictionary) -> Array:
 	var out: Array = []
@@ -2932,6 +2948,19 @@ func _cerimonia_sblocco(tk: String) -> void:
 	var out := create_tween()
 	out.tween_property(tool, "modulate:a", 0.0, 0.2)
 	await _fine(out)
+
+var mm_esulta_id := 0
+func _mm_torna_idle() -> void:
+	mm_esulta_id += 1
+	var mio := mm_esulta_id
+	await get_tree().create_timer(0.5).timeout
+	if mio != mm_esulta_id or mm_frames_attivi != "win": return
+	if mastermind_node == null or not is_instance_valid(mastermind_node): return
+	mm_frames_attivi = "idle"
+	if mm_idle_frames.size() >= 1:
+		mastermind_node.texture = mm_idle_frames[0]
+	elif mm_normal != null:
+		mastermind_node.texture = mm_normal
 
 func _mm_anim_loop() -> void:
 	var fr := 0
@@ -3541,6 +3570,10 @@ func _espandi_wild(reel: int, grid: Array, mults: Array, g_land: Array) -> void:
 	_scintille(centro, Color("#ff9aa8"), 14)
 	_shake(4.0, 0.22)
 	for row in ROWS:
+		# v1.8: nei giri gratis il FLASH lo lancia l'ispettore: qui resta la
+		# gemma finta atterrata, altrimenti comparirebbe prima del lancio
+		if dinamite_lanciata and String(grid[reel][row]) == "DINAMITE":
+			continue
 		_set_cell(reel, row, grid[reel][row], mults[reel][row], 0)
 		var ct: TextureRect = cells[reel][row]["tex"]
 		if ct.visible:
@@ -4321,11 +4354,21 @@ func _fx_start(banner_file: String, tint: Color) -> void:
 		gb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		gb.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		fx_layer.add_child(gb)
-		gb.size = Vector2(600, 140)
-		gb.position = Vector2((VW - 600) / 2.0, -170)
+		# v1.8: l'insegna sta TUTTA nei 120 px sopra i rulli del bonus
+		gb.size = Vector2(600, 116)
+		gb.position = Vector2((VW - 600) / 2.0, -150)
 		var gl := Label.new()
 		gl.text = T(tkey0)
-		gl.add_theme_font_size_override("font_size", 34)
+		# larghezza vera del disegno (l'immagine e' centrata mantenendo le proporzioni)
+		var art_w := gb.size.x
+		if gb.texture != null and gb.texture.get_height() > 0:
+			art_w = minf(gb.size.x, gb.size.y * float(gb.texture.get_width()) / float(gb.texture.get_height()))
+		# il testo si rimpicciolisce finche' entra nel pannello centrale
+		var fsz := 30
+		var fnt: Font = gl.get_theme_font("font")
+		while fsz > 16 and fnt != null and fnt.get_string_size(gl.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fsz).x > art_w * 0.70:
+			fsz -= 1
+		gl.add_theme_font_size_override("font_size", fsz)
 		gl.add_theme_color_override("font_color", Color("#ffe9a8"))
 		gl.add_theme_color_override("font_outline_color", Color("#3a1005"))
 		gl.add_theme_constant_override("outline_size", 6)
@@ -4337,9 +4380,8 @@ func _fx_start(banner_file: String, tint: Color) -> void:
 		gl.size = Vector2(gb.size.x, gb.size.y * 0.72)
 		banner_node = gb
 		var tg := create_tween()
-		# si ferma a -32: il fregio in alto esce dallo schermo, il pannello col
-		# testo resta sopra i rulli del bonus (che iniziano a y=120)
-		tg.tween_property(gb, "position:y", -32.0, 0.5).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		# v1.8: si ferma a y=2, tutta visibile, sopra i rulli del bonus (y=120)
+		tg.tween_property(gb, "position:y", 2.0, 0.5).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		return
 	var bp := "res://assets/%s_%s.png" % [banner_file, L]
 	if not ResourceLoader.exists(bp) and L == "it":
