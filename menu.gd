@@ -1,13 +1,5 @@
 # ==== INIZIO FILE: copia da questa riga in giu' ====
-# menu.gd - MENU MIDNIGHT CASE v1.3 (attract solo monete; base: menu Midnight Heist v2.5)
-# v1.3: COME SI GIOCA con la tabella vincite legata alla PUNTATA: una riga di
-#   gettoni (10/20/50/100/200), parte da quella salvata nel gioco, e tutte le
-#   vincite (linee, lenti, targhe, GRAND) si aggiornano al tocco. Tasti GIOCA /
-#   COME SI GIOCA / CHIUDI a TARGA illustrata (assets/tasto_largo.png se c'e',
-#   altrimenti banner_targa.png, altrimenti lo stile vecchio) con scritta nella
-#   lingua attiva, luce al passaggio e affondo al tocco. RICHIEDE lang.gd v1.1.
-# v1.2: l'ispettore del menu fuma davvero: se esistono detective_idle_1..N.png
-#   li usa animati (1-2-3-2, come nel gioco); altrimenti resta detective.png.
+# menu.gd - MENU MIDNIGHT CASE v1.1 (attract solo monete; base: menu Midnight Heist v2.5) + targhe illustrate
 # v2.5: sul web i browser bloccano l'audio finche' l'utente non tocca la
 #   pagina: al primo click/tocco il menu fa (ri)partire la musica.
 # v2.4.1: fix - lo Sprite2D e' gia' centrato, niente pivot_offset;
@@ -82,84 +74,59 @@ func _input(event: InputEvent) -> void:
 			elif OS.has_feature("web") and menu_music.get_playback_position() < 0.05:
 				menu_music.stop(); menu_music.play()
 
-const PUNTATE := [10, 20, 50, 100, 200]   # le stesse di main.gd (BET_LEVELS)
-const STATO_SAVE_PATH := "user://midnight_stato.cfg"
-
-func _targa_tex() -> Texture2D:
-	for f in ["res://assets/tasto_largo.png", "res://assets/banner_targa.png"]:
-		if ResourceLoader.exists(f):
-			return load(f)
-	return null
-
-func _gold_button(text: String, x: float, y: float, w: float, h: float, fsize: int, gold: bool = true, genitore: Node = null) -> Button:
+func _gold_button(text: String, x: float, y: float, w: float, h: float, fsize: int, gold: bool = true) -> BaseButton:
+	# tasto ILLUSTRATO se c'e' assets/tasto_menu.png (targa vuota: il testo lo scrive il codice, multilingua)
+	if ResourceLoader.exists("res://assets/targa_menu.png"):
+		var tb := TextureButton.new()
+		tb.texture_normal = load("res://assets/targa_menu.png")
+		tb.ignore_texture_size = true
+		tb.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+		tb.focus_mode = Control.FOCUS_NONE
+		tb.modulate = Color(1, 1, 1) if gold else Color(0.82, 0.84, 0.95)
+		add_child(tb)
+		tb.position = Vector2(x, y)
+		tb.size = Vector2(w, h)
+		tb.pivot_offset = Vector2(w / 2.0, h / 2.0)
+		var lb := Label.new()
+		lb.text = text
+		lb.size = Vector2(w, h)
+		lb.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lb.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		lb.add_theme_font_size_override("font_size", fsize)
+		lb.add_theme_color_override("font_color", Color("#ffd76a") if gold else Color("#fff3d0"))
+		lb.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+		lb.add_theme_constant_override("outline_size", 5)
+		lb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tb.add_child(lb)
+		tb.button_down.connect(func() -> void: tb.scale = Vector2(0.96, 0.96))
+		tb.button_up.connect(func() -> void: tb.scale = Vector2.ONE)
+		return tb
 	var b := Button.new()
 	b.text = text
+	b.focus_mode = Control.FOCUS_NONE
 	b.add_theme_font_size_override("font_size", fsize)
-	var tex := _targa_tex()
-	if tex != null:
-		# TARGA ILLUSTRATA (stessa famiglia dei tasti e delle targhe del gioco)
-		var tinta := Color(1.12, 1.0, 0.72) if gold else Color(0.74, 0.82, 1.0)
-		for st in ["normal", "hover", "pressed", "focus", "disabled"]:
-			var tb := StyleBoxTexture.new()
-			tb.texture = tex
-			tb.modulate_color = tinta
-			if st == "hover": tb.modulate_color = tinta.lightened(0.22)
-			if st == "pressed": tb.modulate_color = tinta.darkened(0.18)
-			b.add_theme_stylebox_override(st, tb)
-		for fc in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
-			b.add_theme_color_override(fc, Color("#2a1c05"))
-		b.add_theme_color_override("font_outline_color", Color("#fff0c0"))
-		b.add_theme_constant_override("outline_size", 4)
+	var sb := StyleBoxFlat.new()
+	if gold:
+		sb.bg_color = Color("#e3a93c")
+		b.add_theme_color_override("font_color", Color("#2a1c05"))
 	else:
-		var sb := StyleBoxFlat.new()
-		if gold:
-			sb.bg_color = Color("#e3a93c")
-			b.add_theme_color_override("font_color", Color("#2a1c05"))
-		else:
-			sb.bg_color = Color("#3a4258")
-			b.add_theme_color_override("font_color", Color("#ffffff"))
-		sb.corner_radius_top_left = 14; sb.corner_radius_top_right = 14
-		sb.corner_radius_bottom_left = 14; sb.corner_radius_bottom_right = 14
-		sb.border_width_top = 3; sb.border_width_bottom = 3
-		sb.border_width_left = 3; sb.border_width_right = 3
-		sb.border_color = Color("#ffe89a") if gold else Color("#8a93ad")
-		sb.shadow_color = Color(0,0,0,0.55); sb.shadow_size = 6; sb.shadow_offset = Vector2(0,4)
-		b.add_theme_stylebox_override("normal", sb)
-		var sh := sb.duplicate(); sh.bg_color = Color("#ffc85a") if gold else Color("#4a5470")
-		b.add_theme_stylebox_override("hover", sh)
-	(genitore if genitore != null else self).add_child(b)
+		sb.bg_color = Color("#3a4258")
+		b.add_theme_color_override("font_color", Color("#ffffff"))
+	sb.set_corner_radius_all(14)
+	sb.set_border_width_all(3)
+	sb.border_color = Color("#ffe89a") if gold else Color("#8a93ad")
+	sb.shadow_color = Color(0, 0, 0, 0.55)
+	sb.shadow_size = 6
+	sb.shadow_offset = Vector2(0, 4)
+	b.add_theme_stylebox_override("normal", sb)
+	var sh := sb.duplicate()
+	sh.bg_color = Color("#ffc85a") if gold else Color("#4a5470")
+	b.add_theme_stylebox_override("hover", sh)
+	b.add_theme_stylebox_override("pressed", sh)
+	add_child(b)
 	b.position = Vector2(x, y)
 	b.size = Vector2(w, h)
-	b.pivot_offset = Vector2(w, h) / 2.0
-	# vita: si gonfia al passaggio, affonda al tocco
-	b.mouse_entered.connect(func(): _tasto_scala(b, 1.05))
-	b.mouse_exited.connect(func(): _tasto_scala(b, 1.0))
-	b.button_down.connect(func(): _tasto_scala(b, 0.94))
-	b.button_up.connect(func(): _tasto_scala(b, 1.0))
 	return b
-
-func _tasto_scala(b: Button, k: float) -> void:
-	if not is_instance_valid(b): return
-	var tw := create_tween()
-	tw.tween_property(b, "scale", Vector2(k, k), 0.09).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-
-func _num(v: int) -> String:
-	# separatore delle migliaia secondo la lingua
-	var sep := "."
-	var L := _lang()
-	if L == "en": sep = ","
-	elif L == "fr" or L == "ru": sep = " "
-	var t := str(v); var out := ""; var c := 0
-	for i in range(t.length() - 1, -1, -1):
-		out = t[i] + out; c += 1
-		if c % 3 == 0 and i > 0: out = sep + out
-	return out
-
-func _puntata_salvata() -> int:
-	var cf := ConfigFile.new()
-	if cf.load(STATO_SAVE_PATH) == OK:
-		return clampi(int(cf.get_value("stato", "bet_index", 0)), 0, PUNTATE.size() - 1)
-	return 0
 
 func _build() -> void:
 	for c in get_children():
@@ -181,29 +148,9 @@ func _build() -> void:
 	veil.color = Color(0,0,0,0.5); veil.size = Vector2(VW,VH)
 	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	var mm_idle: Array = []
-	var mfi := 1
-	while ResourceLoader.exists("res://assets/detective_idle_%d.png" % mfi):
-		mm_idle.append(load("res://assets/detective_idle_%d.png" % mfi))
-		mfi += 1
-	if mm_idle.size() >= 2 or ResourceLoader.exists("res://assets/detective.png"):
+	if ResourceLoader.exists("res://assets/detective.png"):
 		var mm := Sprite2D.new()
-		if mm_idle.size() >= 2:
-			mm.texture = mm_idle[0]
-			var st := {"fr": 0}
-			var tmr := Timer.new()
-			tmr.wait_time = 0.45
-			tmr.autostart = true
-			mm.add_child(tmr)
-			tmr.timeout.connect(func():
-				st["fr"] += 1
-				var n := mm_idle.size()
-				var ciclo := 2 * n - 2
-				var i: int = st["fr"] % ciclo
-				if i >= n: i = ciclo - i
-				mm.texture = mm_idle[i])
-		else:
-			mm.texture = load("res://assets/detective.png")
+		mm.texture = load("res://assets/detective.png")
 		var msc := 420.0 / mm.texture.get_height()
 		mm.scale = Vector2(msc, msc)
 		mm.position = Vector2(895, 410)
@@ -427,66 +374,22 @@ func _on_legend() -> void:
 	# scopo
 	_rtl(vb, T("scopo"))
 
-	# ----- TABELLA VINCITE (valori vivi dal motore, per la PUNTATA scelta) -----
+	# ----- TABELLA VINCITE (valori vivi dal motore) -----
 	_sezione(vb, T("sez_paytable"))
 	_rtl(vb, "[color=#c8c8c8]%s[/color]" % T("pt_nota"), 14)
-	var riga_bet := HBoxContainer.new()
-	riga_bet.add_theme_constant_override("separation", 10)
-	vb.add_child(riga_bet)
-	var lb_bet := Label.new()
-	lb_bet.text = T("pt_puntata") + "  "
-	lb_bet.add_theme_font_size_override("font_size", 17)
-	lb_bet.add_theme_color_override("font_color", Color("#f5b73f"))
-	riga_bet.add_child(lb_bet)
-	var pt_righe := {}
 	for sym in SYM_ORDER:
-		pt_righe[sym] = _rtl(vb, "", 17)
-	var pt_scatter := _rtl(vb, "", 17)
-	var chips: Array = []
-	var stato_pt := {"targhe": null}
-	var aggiorna := func(bi: int):
-		var k: float = PUNTATE[bi] / float(SlotEngine.TOTAL_BET)
-		for sym in SYM_ORDER:
-			var pt: Dictionary = SlotEngine.PAYTABLE[sym]
-			pt_righe[sym].text = _icona_bb(sym.to_lower(), 46) + "[color=#ffd991]3 %s = %s      4 %s = %s      5 %s = %s[/color]" % [
-				T("x_di"), _num(int(round(pt[3] * k))), T("x_di"), _num(int(round(pt[4] * k))), T("x_di"), _num(int(round(pt[5] * k)))]
-		var sp: Dictionary = SlotEngine.SCATTER_PAY
-		pt_scatter.text = _icona_bb("scatter", 46) + "[color=#ffd991]" + (T("scpay") % [
-			_num(int(round(sp[3] * PUNTATE[bi]))), _num(int(round(sp[4] * PUNTATE[bi]))), _num(int(round(sp[5] * PUNTATE[bi])))]) + "[/color]"
-		if stato_pt["targhe"] != null:
-			stato_pt["targhe"].text = "[color=#ffd991]" + (T("targhe") % [_num(int(round(50 * k))), _num(int(round(200 * k))), _num(int(round(1000 * k))), _num(int(round(10000 * k)))]) + "[/color]"
-		for ci in chips.size():
-			chips[ci].button_pressed = ci == bi
-	for bi in PUNTATE.size():
-		var ch := Button.new()
-		ch.text = _num(PUNTATE[bi])
-		ch.toggle_mode = true
-		ch.focus_mode = Control.FOCUS_NONE
-		ch.custom_minimum_size = Vector2(74, 38)
-		ch.add_theme_font_size_override("font_size", 18)
-		for st in ["normal", "hover", "pressed", "hover_pressed"]:
-			var cs := StyleBoxFlat.new()
-			var acceso: bool = st == "pressed" or st == "hover_pressed"
-			cs.bg_color = Color("#e3a93c") if acceso else Color("#1b2030")
-			if st == "hover": cs.bg_color = Color("#2a3148")
-			cs.border_color = Color("#ffe89a") if acceso else Color("#8a6a2a")
-			cs.border_width_top = 2; cs.border_width_bottom = 2; cs.border_width_left = 2; cs.border_width_right = 2
-			cs.corner_radius_top_left = 19; cs.corner_radius_top_right = 19
-			cs.corner_radius_bottom_left = 19; cs.corner_radius_bottom_right = 19
-			ch.add_theme_stylebox_override(st, cs)
-		ch.add_theme_color_override("font_color", Color("#ffd991"))
-		ch.add_theme_color_override("font_hover_color", Color("#ffe9b8"))
-		ch.add_theme_color_override("font_pressed_color", Color("#2a1c05"))
-		ch.add_theme_color_override("font_hover_pressed_color", Color("#2a1c05"))
-		riga_bet.add_child(ch)
-		chips.append(ch)
-		ch.pressed.connect(aggiorna.bind(bi))
+		var pt: Dictionary = SlotEngine.PAYTABLE[sym]
+		var riga := _icona_bb(sym.to_lower(), 46)
+		riga += "[color=#ffd991]3 %s = %d      4 %s = %d      5 %s = %d[/color]" % [
+			T("x_di"), pt[3], T("x_di"), pt[4], T("x_di"), pt[5]]
+		_rtl(vb, riga, 17)
+	_rtl(vb, _icona_bb("scatter", 46) + "[color=#ffd991]" + T("scpay") + "[/color]", 17)
 
 	# ----- I BONUS -----
 	_sezione(vb, T("sez_bonus"))
 	_rtl(vb, _icona_bb("scatter") + T("colpo"))
 	_rtl(vb, _icona_bb("coin") + T("cassa"))
-	stato_pt["targhe"] = _rtl(vb, "")
+	_rtl(vb, "[color=#ffd991]" + T("targhe") + "[/color]")
 	_rtl(vb, _icona_bb("wild") + T("wild"))
 
 	# ----- GLI INDIZI (solo se il motore li usa: Midnight Case no) -----
@@ -504,7 +407,22 @@ func _on_legend() -> void:
 	# ----- COMANDI -----
 	_sezione(vb, T("sez_comandi"))
 	_rtl(vb, T("comandi"), 15)
-	aggiorna.call(_puntata_salvata())
 
-	var close := _gold_button(T("chiudi"), (PW - 200) / 2.0, PH - 66, 200, 52, 20, true, panel)
+	var close := Button.new()
+	close.text = T("chiudi")
+	close.add_theme_font_size_override("font_size", 20)
+	var csb := StyleBoxFlat.new()
+	csb.bg_color = Color("#e3a93c")
+	csb.corner_radius_top_left = 12; csb.corner_radius_top_right = 12
+	csb.corner_radius_bottom_left = 12; csb.corner_radius_bottom_right = 12
+	csb.border_width_top = 2; csb.border_width_bottom = 2
+	csb.border_width_left = 2; csb.border_width_right = 2
+	csb.border_color = Color("#ffe89a")
+	close.add_theme_stylebox_override("normal", csb)
+	var csh := csb.duplicate(); csh.bg_color = Color("#ffc85a")
+	close.add_theme_stylebox_override("hover", csh)
+	close.add_theme_color_override("font_color", Color("#2a1c05"))
+	panel.add_child(close)
+	close.position = Vector2((PW - 180) / 2.0, PH - 62)
+	close.size = Vector2(180, 46)
 	close.pressed.connect(func(): root.queue_free())
