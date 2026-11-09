@@ -1,4 +1,8 @@
-export/
+*.keystore
+*.tmp
 .DS_Store
 .godot/
-*.tmp
+android/
+export/
+project.godot.bak
+test_shots.gd
