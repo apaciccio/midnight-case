@@ -1,5 +1,9 @@
 # ==== INIZIO FILE: copia da questa riga in giu' ====
-# main.gd - MIDNIGHT CASE v1.9 (TEMA DETECTIVE NOIR, SENZA INDIZI)
+# main.gd - MIDNIGHT CASE v1.10 (NEGOZIO MONETE)
+# v1.10: NEGOZIO MONETE come Heist v3.77: tasto "+" accanto al saldo (o tocco
+#   sul saldo) apre shop_panel.gd; acquisti gestiti dall'autoload Shop (Google
+#   Play su Android, App Store su iPhone, PROVA su Mac). Saldo salvato PRIMA di
+#   segnare le monete come incassate. Motore, pesi e paytable NON cambiano.
 # v1.9: l'ispettore ESULTA (detective_win_1..N) a ogni vincita del gioco base,
 #   per tutta la durata del conteggio; prima i fotogrammi win partivano solo
 #   dentro i bonus.
@@ -492,6 +496,9 @@ var last_spin_click := 0.0
 var fx_layer: Node2D = null
 var grid_root: Node2D = null
 var hud_nodes: Array = []
+var shop_btn: Button = null
+var shop_aperto := false
+const SHOP_PANEL := preload("res://shop_panel.gd")
 var rain_on := false
 var mm_sway_tween: Tween = null
 var banner_node: TextureRect = null
@@ -558,6 +565,10 @@ func _ready() -> void:
 	_riscalda_shader()
 	_fill_random_grid()
 	_audio_setup()
+	var sh := _shop()
+	if sh != null:
+		sh.monete_arrivate.connect(func(_n): _incassa_acquisti())
+	_incassa_acquisti.call_deferred()
 
 func _bet() -> int: return BET_LEVELS[bet_index]
 func _t(s: float) -> float: return s * (TURBO_SCALE if turbo else 1.0)
@@ -836,8 +847,31 @@ func _build_ui() -> void:
 	balance_label = Label.new()
 	balance_label.position = Vector2(GRID_X, below)
 	balance_label.add_theme_font_size_override("font_size", 22)
-	add_child(balance_label); _update_balance()
+	balance_label.mouse_filter = Control.MOUSE_FILTER_STOP
+	balance_label.gui_input.connect(func(ev: InputEvent):
+		if (ev is InputEventMouseButton and ev.pressed) or (ev is InputEventScreenTouch and ev.pressed):
+			_apri_negozio())
+	add_child(balance_label)
 	hud_nodes.append(balance_label)
+	# tasto "+" del negozio, subito a destra del saldo (si sposta col testo)
+	shop_btn = Button.new()
+	shop_btn.text = "+"
+	shop_btn.size = Vector2(34, 34)
+	shop_btn.add_theme_font_size_override("font_size", 24)
+	var sb_n := StyleBoxFlat.new()
+	sb_n.bg_color = Color("#e3b04b"); sb_n.set_corner_radius_all(17)
+	sb_n.border_color = Color("#ffe9a8"); sb_n.set_border_width_all(2)
+	var sb_h := sb_n.duplicate(); sb_h.bg_color = Color("#ffe9a8")
+	shop_btn.add_theme_stylebox_override("normal", sb_n)
+	shop_btn.add_theme_stylebox_override("hover", sb_h)
+	shop_btn.add_theme_stylebox_override("pressed", sb_h)
+	shop_btn.add_theme_color_override("font_color", Color("#2a1c05"))
+	shop_btn.add_theme_color_override("font_hover_color", Color("#2a1c05"))
+	shop_btn.add_theme_color_override("font_pressed_color", Color("#2a1c05"))
+	shop_btn.pressed.connect(_apri_negozio)
+	add_child(shop_btn)
+	hud_nodes.append(shop_btn)
+	_update_balance()
 
 	# riga 2: vincita centrata sulla griglia
 	win_label = Label.new()
@@ -1007,6 +1041,8 @@ func _build_ui() -> void:
 
 # fast-drop: barra spaziatrice
 func _unhandled_input(event: InputEvent) -> void:
+	if shop_aperto:
+		return   # con il negozio aperto la barra spaziatrice non gira i rulli
 	if event is InputEventKey and event.pressed and event.keycode == KEY_SPACE:
 		if spinning:
 			request_fastdrop = true
@@ -1015,7 +1051,40 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_D and DEMO_ATTIVA:
 		_demo_bonus()
 
-func _update_balance() -> void: balance_label.text = "%s: %d" % [T("monete"), balance]
+func _update_balance() -> void:
+	balance_label.text = "%s: %d" % [T("monete"), balance]
+	if shop_btn != null and is_instance_valid(shop_btn):
+		var lw := balance_label.get_minimum_size().x
+		shop_btn.position = balance_label.position + Vector2(lw + 10, -3)
+
+# ---------- NEGOZIO MONETE (v3.77) ----------
+func _apri_negozio() -> void:
+	if shop_aperto or spinning or autospin_left != 0:
+		return
+	if input_gate != null and input_gate.visible:
+		return   # bonus o animazione in corso
+	shop_aperto = true
+	var p: Control = SHOP_PANEL.new()
+	p.chiuso.connect(func(): shop_aperto = false)
+	add_child(p)
+
+func _shop() -> Node:
+	return get_node_or_null("/root/Shop")
+
+func _incassa_acquisti() -> void:
+	var sh := _shop()
+	if sh == null:
+		return
+	var n: int = sh.in_attesa()
+	if n <= 0:
+		return
+	balance += n
+	_update_balance()
+	_salva_stato()               # prima salvo il saldo...
+	sh.segna_incassate(n)        # ...poi segno le monete come incassate
+	if not spinning:
+		_targa_banner(T("shop_incassate") % SHOP_PANEL.migliaia(n), Color("#f5b73f"), 1.6)
+		_burst_money(18)
 func _update_bet_label() -> void:
 	if bet_num_label != null and is_instance_valid(bet_num_label):
 		bet_num_label.text = str(_bet())

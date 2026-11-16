@@ -6,3 +6,5 @@ android/
 export/
 project.godot.bak
 test_shots.gd
+
+.plugin_dl/
