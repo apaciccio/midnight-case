@@ -1,5 +1,8 @@
 # ==== INIZIO FILE: copia da questa riga in giu' ====
-# menu.gd - MENU MIDNIGHT CASE v1.3 (attract solo monete; base: menu Midnight Heist v2.5)
+# menu.gd - MENU MIDNIGHT CASE v1.4 (attract solo monete; base: menu Midnight Heist v2.5)
+# v1.4: fix iPhone - cambiare lingua bloccava l'app (menu ricostruito
+#   dentro il segnale della tendina ancora aperta). Ora ricostruzione differita;
+#   l'animazione di sottofondo non si duplica piu' a ogni cambio lingua.
 # v1.3: COME SI GIOCA con la tabella vincite legata alla PUNTATA: una riga di
 #   gettoni (10/20/50/100/200), parte da quella salvata nel gioco, e tutte le
 #   vincite (linee, lenti, targhe, GRAND) si aggiornano al tocco. Tasti GIOCA /
@@ -251,13 +254,33 @@ func _build() -> void:
 		if code == _lang(): idx = i
 	ob.select(idx)
 	ob.item_selected.connect(func(i2: int):
-		Engine.set_meta("mh_lang", Lingue.LINGUE[i2]); _build())
+		Engine.set_meta("mh_lang", Lingue.LINGUE[i2])
+		_cambia_lingua.call_deferred(ob))
 	add_child(ob)
 	ob.position = Vector2(20, 20)
 	ob.size = Vector2(150, 38)
 
 	_build_audio_targhetta()
-	_attract_mode()
+	if not _attract_attivo:
+		_attract_attivo = true
+		_attract_mode()
+
+# Cambio lingua: NON si ricostruisce il menu dentro il segnale della tendina
+# (su iPhone la tendina e' ancora aperta e liberarla li' blocca l'app).
+# Si chiude la tendina, si aspetta un frame e poi si ricostruisce.
+var _attract_attivo := false
+var _rifacendo := false
+func _cambia_lingua(ob: OptionButton) -> void:
+	if _rifacendo: return
+	_rifacendo = true
+	if is_instance_valid(ob):
+		ob.get_popup().hide()
+		ob.disabled = true
+		ob.release_focus()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_build()
+	_rifacendo = false
 
 func _titolo_brillio(t: Sprite2D, _sc: float) -> void:
 	while is_instance_valid(t):
