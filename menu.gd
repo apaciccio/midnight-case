@@ -1,5 +1,7 @@
 # ==== INIZIO FILE: copia da questa riga in giu' ====
-# menu.gd - MENU MIDNIGHT CASE v1.4 (attract solo monete; base: menu Midnight Heist v2.5)
+# menu.gd - MENU MIDNIGHT CASE v1.5 (attract solo monete; base: menu Midnight Heist v2.5)
+# 1.5: la tendina di sistema (OptionButton) e' sostituita da un tasto + elenco
+#   di tasti normali: su iPhone dopo il cambio lingua i tasti non rispondevano piu'.
 # v1.4: fix iPhone - cambiare lingua bloccava l'app (menu ricostruito
 #   dentro il segnale della tendina ancora aperta). Ora ricostruzione differita;
 #   l'animazione di sottofondo non si duplica piu' a ogni cambio lingua.
@@ -212,7 +214,7 @@ func _build() -> void:
 		mm.position = Vector2(895, 410)
 		add_child(mm)
 		# ondeggio dolce (Sprite2D ruota attorno al proprio centro: va benissimo)
-		var mmt := create_tween().set_loops()
+		var mmt := mm.create_tween().set_loops()   # legato al Mastermind: muore con lui
 		mmt.tween_property(mm, "rotation_degrees", 1.2, 2.2).set_trans(Tween.TRANS_SINE)
 		mmt.tween_property(mm, "rotation_degrees", -1.2, 2.2).set_trans(Tween.TRANS_SINE)
 
@@ -235,7 +237,7 @@ func _build() -> void:
 		t.position = Vector2(375, 205)
 		add_child(t)
 		# il logo respira
-		var tb := create_tween().set_loops()
+		var tb := t.create_tween().set_loops()   # legato al logo: muore con lui
 		tb.tween_property(t, "scale", Vector2(sc*1.04, sc*1.04), 1.6).set_trans(Tween.TRANS_SINE)
 		tb.tween_property(t, "scale", Vector2(sc, sc), 1.6).set_trans(Tween.TRANS_SINE)
 		# un brillio che attraversa il titolo ogni tanto
@@ -244,40 +246,101 @@ func _build() -> void:
 	_gold_button(T("gioca"), 150, 430, 280, 90, 36, true).pressed.connect(_on_play)
 	_gold_button(T("come"), 450, 446, 190, 56, 18, false).pressed.connect(_on_legend)
 
-	# lingua: rilevata dal dispositivo; un menu a tendina compatto per cambiarla
-	var ob := OptionButton.new()
-	ob.add_theme_font_size_override("font_size", 15)
-	var idx := 0
-	for i in Lingue.LINGUE.size():
-		var code: String = Lingue.LINGUE[i]
-		ob.add_item(Lingue.NOMI[code], i)
-		if code == _lang(): idx = i
-	ob.select(idx)
-	ob.item_selected.connect(func(i2: int):
-		Engine.set_meta("mh_lang", Lingue.LINGUE[i2])
-		_cambia_lingua.call_deferred(ob))
-	add_child(ob)
-	ob.position = Vector2(20, 20)
-	ob.size = Vector2(150, 38)
+	# lingua: tasto + elenco fatto di normali Button (niente tendina di sistema:
+	# su iPhone la tendina OptionButton bloccava i tocchi dopo il cambio lingua)
+	_crea_scelta_lingua()
 
 	_build_audio_targhetta()
 	if not _attract_attivo:
 		_attract_attivo = true
 		_attract_mode()
 
-# Cambio lingua: NON si ricostruisce il menu dentro il segnale della tendina
-# (su iPhone la tendina e' ancora aperta e liberarla li' blocca l'app).
-# Si chiude la tendina, si aspetta un frame e poi si ricostruisce.
+# ---- scelta lingua (v. fix iPhone) ----------------------------------------
+# Tasto in alto a sinistra che apre un elenco di 7 tasti normali. Toccando
+# una lingua si chiude l'elenco e, un frame dopo, il menu si ricostruisce.
+# Tocco fuori dall'elenco = chiude. Nessuna finestra/popup di sistema.
 var _attract_attivo := false
 var _rifacendo := false
-func _cambia_lingua(ob: OptionButton) -> void:
+
+func _stile_lingua(colore: Color) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = colore
+	sb.border_color = Color(0.96, 0.72, 0.25, 0.8)
+	sb.border_width_top = 1; sb.border_width_bottom = 1
+	sb.border_width_left = 1; sb.border_width_right = 1
+	sb.corner_radius_top_left = 8; sb.corner_radius_top_right = 8
+	sb.corner_radius_bottom_left = 8; sb.corner_radius_bottom_right = 8
+	sb.content_margin_left = 12; sb.content_margin_right = 12
+	return sb
+
+func _crea_scelta_lingua() -> void:
+	# il tasto vecchio e' in coda di cancellazione: gli cambio nome per liberare "TastoLingua"
+	var vecchio := get_node_or_null("TastoLingua")
+	if vecchio != null:
+		vecchio.name = "TastoLingua_vecchio"
+	var tasto := Button.new()
+	tasto.name = "TastoLingua"
+	tasto.text = Lingue.NOMI[_lang()]
+	tasto.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	tasto.focus_mode = Control.FOCUS_NONE
+	tasto.add_theme_font_size_override("font_size", 15)
+	tasto.add_theme_stylebox_override("normal", _stile_lingua(Color(0.05, 0.06, 0.1, 0.85)))
+	tasto.add_theme_stylebox_override("hover", _stile_lingua(Color(0.1, 0.12, 0.2, 0.95)))
+	tasto.add_theme_stylebox_override("pressed", _stile_lingua(Color(0.15, 0.17, 0.28, 0.95)))
+	add_child(tasto)
+	tasto.position = Vector2(20, 20)
+	tasto.size = Vector2(150, 38)
+	# freccina disegnata (non dipende dal font)
+	var fr := Polygon2D.new()
+	fr.polygon = PackedVector2Array([Vector2(0, 0), Vector2(10, 0), Vector2(5, 6)])
+	fr.color = Color(0.96, 0.72, 0.25)
+	fr.position = Vector2(128, 16)
+	tasto.add_child(fr)
+	tasto.pressed.connect(_apri_lingue)
+
+func _apri_lingue() -> void:
+	if _rifacendo: return
+	var aperto := get_node_or_null("SceltaLingua")
+	if aperto != null:
+		aperto.name = "SceltaLingua_chiusa"
+		aperto.queue_free()
+		return
+	var velo := Control.new()
+	velo.name = "SceltaLingua"
+	velo.size = Vector2(VW, VH)
+	velo.mouse_filter = Control.MOUSE_FILTER_STOP
+	velo.z_index = 100
+	velo.gui_input.connect(func(e: InputEvent) -> void:
+		if (e is InputEventMouseButton or e is InputEventScreenTouch) and e.is_pressed():
+			velo.name = "SceltaLingua_chiusa"
+			velo.queue_free())
+	var pan := Panel.new()
+	pan.add_theme_stylebox_override("panel", _stile_lingua(Color(0.05, 0.06, 0.1, 0.96)))
+	velo.add_child(pan)
+	pan.position = Vector2(20, 62)
+	pan.size = Vector2(150, Lingue.LINGUE.size() * 36 + 10)
+	for i in Lingue.LINGUE.size():
+		var code: String = Lingue.LINGUE[i]
+		var b := Button.new()
+		b.text = Lingue.NOMI[code]
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.focus_mode = Control.FOCUS_NONE
+		b.flat = code != _lang()
+		b.add_theme_font_size_override("font_size", 15)
+		pan.add_child(b)
+		b.position = Vector2(5, 5 + i * 36)
+		b.size = Vector2(140, 34)
+		b.pressed.connect(_scegli_lingua.bind(code))
+	add_child(velo)
+
+func _scegli_lingua(code: String) -> void:
 	if _rifacendo: return
 	_rifacendo = true
-	if is_instance_valid(ob):
-		ob.get_popup().hide()
-		ob.disabled = true
-		ob.release_focus()
-	await get_tree().process_frame
+	Engine.set_meta("mh_lang", code)
+	var aperto := get_node_or_null("SceltaLingua")
+	if aperto != null:
+		aperto.name = "SceltaLingua_chiusa"
+		aperto.queue_free()
 	await get_tree().process_frame
 	_build()
 	_rifacendo = false

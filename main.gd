@@ -812,10 +812,10 @@ func _build_ui() -> void:
 		add_child(mastermind_node)
 		# perno ai piedi: il respiro parte da terra, non fluttua a mezz'aria
 		mastermind_node.pivot_offset = Vector2(207, 460)
-		var resp := create_tween().set_loops()
+		var resp := mastermind_node.create_tween().set_loops()   # legato al nodo animato
 		resp.tween_property(mastermind_node, "scale", Vector2(1.004, 1.018), 1.7).set_trans(Tween.TRANS_SINE)
 		resp.tween_property(mastermind_node, "scale", Vector2.ONE, 1.7).set_trans(Tween.TRANS_SINE)
-		var sway := create_tween().set_loops()
+		var sway := mastermind_node.create_tween().set_loops()   # legato al nodo animato
 		sway.tween_property(mastermind_node, "rotation_degrees", 0.9, 2.3).set_trans(Tween.TRANS_SINE)
 		sway.tween_property(mastermind_node, "rotation_degrees", -0.9, 2.3).set_trans(Tween.TRANS_SINE)
 		# frame animati opzionali: mastermind_idle_1..N.png (6 fps)
@@ -1395,7 +1395,7 @@ func _build_piano_medaglioni() -> void:
 		bright.size = Vector2(icon_l, icon_l)
 		piano_med[tk] = {"back": back, "clip": clip, "bright": bright, "icon": icon_l, "size": msize, "icon_top": icon_top, "pulse": null, "telegraph": null, "base_y": my}
 		# fluttuazione continua: vivo anche da fermo
-		var bob := create_tween().set_loops()
+		var bob := back.create_tween().set_loops()   # legato al nodo animato
 		bob.tween_property(back, "position:y", my + 5.0, 1.35 + fase).set_trans(Tween.TRANS_SINE)
 		bob.tween_property(back, "position:y", my, 1.35 + fase).set_trans(Tween.TRANS_SINE)
 		fase += 0.22
@@ -1435,7 +1435,7 @@ func _piano_apply_frac(tk: String, f: float, animate: bool) -> void:
 		med["pulse"].kill(); med["pulse"] = null
 		med["back"].scale = Vector2.ONE
 	if f >= 0.78 and f < 1.0:
-		var pt := create_tween().set_loops()
+		var pt: Tween = (med["back"] as Node).create_tween().set_loops()   # legato al nodo animato
 		pt.tween_property(med["back"], "scale", Vector2(1.06, 1.06), 0.5).set_trans(Tween.TRANS_SINE)
 		pt.tween_property(med["back"], "scale", Vector2.ONE, 0.5).set_trans(Tween.TRANS_SINE)
 		med["pulse"] = pt
@@ -1458,15 +1458,15 @@ func _telegraph_start(tk: String) -> void:
 	var back: Control = med["back"]
 	var tw: Tween
 	if tk == "TOOL_RED":
-		tw = create_tween().set_loops()
+		tw = back.create_tween().set_loops()   # legato al nodo animato
 		tw.tween_property(back, "rotation_degrees", 4.0, 0.06)
 		tw.tween_property(back, "rotation_degrees", -4.0, 0.06)
 	elif tk == "TOOL_GREEN":
-		tw = create_tween().set_loops()
+		tw = back.create_tween().set_loops()   # legato al nodo animato
 		tw.tween_property(back, "scale", Vector2(1.10, 1.10), 0.32).set_trans(Tween.TRANS_SINE)
 		tw.tween_property(back, "scale", Vector2.ONE, 0.32).set_trans(Tween.TRANS_SINE)
 	else:
-		tw = create_tween().set_loops()
+		tw = back.create_tween().set_loops()   # legato al nodo animato
 		tw.tween_property(back, "modulate", Color(1.55, 1.55, 1.95), 0.35)
 		tw.tween_property(back, "modulate", Color.WHITE, 0.35)
 	med["telegraph"] = tw
@@ -2445,7 +2445,7 @@ func _play_scasso(result: Dictionary, scale: float, finale: bool = true) -> int:
 		ic.size = Vector2(dim, dim)
 		ic.visible = false
 		# fluttuazione, ognuna col suo ritmo
-		var bob := create_tween().set_loops()
+		var bob := b.create_tween().set_loops()   # legato al nodo animato
 		bob.tween_property(b, "position:y", by + 7.0, 1.1 + 0.13 * i).set_trans(Tween.TRANS_SINE)
 		bob.tween_property(b, "position:y", by, 1.1 + 0.13 * i).set_trans(Tween.TRANS_SINE)
 		stato["bottoni"].append([b, ic])
@@ -2763,7 +2763,7 @@ func _count_up(prefix: String, amount: int, duration: float) -> void:
 		mastermind_node.texture = mm_win_frames[0]
 	_sfx("sfx_win_big" if amount >= _bet() * 10 else "sfx_win_small")
 	win_label.pivot_offset = win_label.size / 2.0
-	var pulse := create_tween().set_loops()
+	var pulse := win_label.create_tween().set_loops()   # legato al nodo animato
 	pulse.tween_property(win_label, "scale", Vector2(1.06, 1.06), 0.13)
 	pulse.tween_property(win_label, "scale", Vector2.ONE, 0.13)
 	var tick_st := {"on": true}
@@ -2891,7 +2891,7 @@ func _presagio_start(col: Color, sfx_nome: String) -> void:
 		c.position = r.position
 		c.size = r.size
 	fr.modulate.a = 0.0
-	var tw := create_tween().set_loops()
+	var tw := fr.create_tween().set_loops()   # legato al nodo animato
 	tw.tween_property(fr, "modulate:a", 0.85, 0.45).set_trans(Tween.TRANS_SINE)
 	tw.tween_property(fr, "modulate:a", 0.12, 0.45).set_trans(Tween.TRANS_SINE)
 	presagi.append({"node": fr, "tw": tw})
@@ -3432,9 +3432,9 @@ func _play_taglio(result: Dictionary, scale: float, finale: bool = true) -> int:
 	dia.size = Vector2(300, 300)
 	dia.position = centro - dia.size / 2.0
 	dia.pivot_offset = dia.size / 2.0
-	var rot := create_tween().set_loops()
+	var rot := dia.create_tween().set_loops()   # legato al nodo animato
 	rot.tween_property(dia, "rotation_degrees", 360.0, 7.0).from(0.0)
-	var glow := create_tween().set_loops()
+	var glow := dia.create_tween().set_loops()   # legato al nodo animato
 	glow.tween_property(dia, "modulate", Color(1.25, 1.35, 1.6), 1.2).set_trans(Tween.TRANS_SINE)
 	glow.tween_property(dia, "modulate", Color.WHITE, 1.2).set_trans(Tween.TRANS_SINE)
 	var stato := {"colpi": 0, "rotto": false}
@@ -3672,7 +3672,7 @@ func _aura_cella(c: Dictionary, sym: String) -> void:
 	if c.get("sweep") != null:
 		var sw: TextureRect = c["sweep"]
 		sw.visible = true
-		var stw := create_tween().set_loops()
+		var stw := sw.create_tween().set_loops()   # legato al nodo animato
 		stw.tween_interval(randf_range(1.5, 3.5))
 		stw.tween_property(sw, "position:x", CELL + 40.0, 0.5).from(-70.0).set_trans(Tween.TRANS_SINE)
 		c["sweep_tw"] = stw
@@ -3685,7 +3685,7 @@ func _aura_cella(c: Dictionary, sym: String) -> void:
 	aura.modulate = Color(1, 1, 1, 0.55 if forte else 0.32)
 	aura.pivot_offset = aura.size / 2.0
 	aura.scale = Vector2.ONE
-	var tw := create_tween().set_loops()
+	var tw := aura.create_tween().set_loops()   # legato al nodo animato
 	tw.tween_property(aura, "modulate:a", 0.9 if forte else 0.5, 0.7 + randf() * 0.4).set_trans(Tween.TRANS_SINE)
 	tw.parallel().tween_property(aura, "scale", Vector2(1.12, 1.12), 0.7 + randf() * 0.4).set_trans(Tween.TRANS_SINE)
 	tw.tween_property(aura, "modulate:a", 0.55 if forte else 0.32, 0.7 + randf() * 0.4).set_trans(Tween.TRANS_SINE)
@@ -3981,7 +3981,7 @@ func _mastermind_lancia(bersagli: Array) -> void:
 	for b0 in bersagli:
 		var ct: TextureRect = cells[b0[0]][b0[1]]["tex"]
 		ct.pivot_offset = ct.size / 2.0
-		var tp := create_tween().set_loops()
+		var tp := ct.create_tween().set_loops()   # legato al nodo animato
 		tp.tween_property(ct, "rotation_degrees", 7.0, 0.07)
 		tp.tween_property(ct, "rotation_degrees", -7.0, 0.07)
 		tw_prov.append(tp)
@@ -4220,7 +4220,7 @@ func _flash_schermo(col: Color, alfa: float = 0.32, durata: float = 0.45) -> voi
 func _glow_lock(reel: int, row: int) -> void:
 	# il sacco bloccato respira
 	var p: ColorRect = cells[reel][row]["panel"]
-	var tw := create_tween().set_loops()
+	var tw := p.create_tween().set_loops()   # legato al nodo animato
 	tw.tween_property(p, "modulate", Color(1.16, 1.12, 0.95), 0.75).set_trans(Tween.TRANS_SINE)
 	tw.tween_property(p, "modulate", Color.WHITE, 0.75).set_trans(Tween.TRANS_SINE)
 	cassa_glows.append(tw)
@@ -4285,7 +4285,7 @@ func _celebra_vincita(amount: int) -> void:
 	raggi.color = Color(1.0, 0.84, 0.2, 0.10 + 0.05 * livello)
 	lay.add_child(raggi)
 	raggi.position = Vector2(VW / 2.0, VH / 2.0 - 20.0)
-	var trot := create_tween().set_loops()
+	var trot := raggi.create_tween().set_loops()   # legato al nodo animato
 	trot.tween_property(raggi, "rotation", TAU, 8.0 - livello)
 	lay.tree_exiting.connect(func(): if trot.is_valid(): trot.kill())
 	# il MASTERMIND entra da destra in posa d'esultanza
@@ -4509,7 +4509,7 @@ func _fx_start(banner_file: String, tint: Color) -> void:
 		var jump := create_tween()
 		jump.tween_property(mastermind_node, "scale", Vector2(1.12, 1.12), 0.18)
 		jump.tween_property(mastermind_node, "scale", Vector2(1.0, 1.0), 0.22)
-		mm_sway_tween = create_tween().set_loops()
+		mm_sway_tween = mastermind_node.create_tween().set_loops()   # legato al nodo animato
 		mm_sway_tween.tween_property(mastermind_node, "rotation_degrees", 3.0, 0.8).set_trans(Tween.TRANS_SINE)
 		mm_sway_tween.tween_property(mastermind_node, "rotation_degrees", -3.0, 0.8).set_trans(Tween.TRANS_SINE)
 
